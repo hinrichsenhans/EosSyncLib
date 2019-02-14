@@ -169,6 +169,7 @@ public:
 	static const char* GetSafeString(const char*buf, size_t size);
 	static bool IsIntString(const char *buf);
 	static bool IsFloatString(const char *buf);
+	static bool IsTimeStringHack(const char *buf);
 	static int32_t GetInt32FromBuf(const char *buf);
 	static uint32_t GetUInt32FromBuf(const char *buf);
 	static int64_t GetInt64FromBuf(const char *buf);

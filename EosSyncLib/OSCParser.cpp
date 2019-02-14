@@ -1178,6 +1178,55 @@ bool OSCArgument::IsIntString(const char *buf)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+bool OSCArgument::IsTimeStringHack(const char *buf)
+{
+	if( buf )
+	{
+		bool gotDigit = false;
+		bool gotTag = false;
+
+		for(;;buf++)
+		{
+			switch( *buf )
+			{
+			case 0:
+				return gotDigit;	// done, did we get at least one digit?
+
+			case 'T':
+			{
+				if(gotDigit || gotTag)
+					return false;	// fail, got a sign after a digit or another sign
+				gotTag = true;
+			}
+			break;
+
+			default:
+			{
+				if(isdigit(*buf) == 0)
+				{
+					if(isspace(*buf) != 0)
+					{
+						if(gotDigit || gotTag)
+							return gotDigit;	// trailing space, treat as string end
+
+												// ignore leading spaces
+					}
+					else
+						return false;	// fail, non-digit and non-space
+				}
+				else
+					gotDigit = true;
+			}
+			break;
+			}
+		}
+	}
+
+	return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 bool OSCArgument::IsFloatString(const char *buf)
 {
 	if( buf )
@@ -1861,10 +1910,16 @@ OSCPacketWriter* OSCPacketWriter::CreatePacketWriterForString(const char *str)
 				{
 					if(i > args)
 					{
-						if( OSCArgument::IsIntString(args) )
-							packet->AddInt32( atoi(args) );
-						else if( OSCArgument::IsFloatString(args) )
-							packet->AddFloat32( static_cast<float>(atof(args)) );
+						if (OSCArgument::IsIntString(args))
+							packet->AddInt32(atoi(args));
+						else if (OSCArgument::IsFloatString(args))
+							packet->AddFloat32(static_cast<float>(atof(args)));
+						else if (OSCArgument::IsTimeStringHack(args))
+						{
+							if (args[0] == 'T')
+								args++;
+							packet->AddTime(strtoull(args,nullptr,10));
+						}
 						else
 							packet->AddString(args);
 					}
@@ -1885,6 +1940,12 @@ OSCPacketWriter* OSCPacketWriter::CreatePacketWriterForString(const char *str)
 							packet->AddInt32( atoi(copy) );
 						else if( OSCArgument::IsFloatString(copy) )
 							packet->AddFloat32( static_cast<float>(atof(copy)) );
+						else if (OSCArgument::IsTimeStringHack(copy))
+						{
+							if (args[0] == 'T')
+								args++;
+							packet->AddTime(strtoull(args,nullptr,10));
+						}
 						else
 							packet->AddString(copy);
 
